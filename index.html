@@ -272,11 +272,12 @@
   }
 
   @media (max-width: 700px) {
+    /* Show ASCII logo on mobile too */
     .banner-ascii {
-      display: none;
+      display: block;
     }
     .banner-ocr {
-      display: block;
+      display: none;
     }
 
     /* Small screen layout: no fixed viewport, no scaling hack */
@@ -292,18 +293,10 @@
       height: auto;
       max-width: 100%;
       transform: none;
+      overflow-x: auto; /* allow horizontal scroll for wide ASCII art */
     }
 
     input {
-      font-size: 0.95em;
-    }
-
-    .banner-ocr {
-      font-size: 1.5em;
-      margin-bottom: 0.75em;
-    }
-
-    .banner-ocr code {
       font-size: 0.95em;
     }
   }
