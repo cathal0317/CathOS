@@ -279,28 +279,32 @@
       display: block;
     }
 
-    /* Small screen scale */
+    /* Small screen layout: no fixed viewport, no scaling hack */
     body {
-      font-size: 0.85em;
+      font-size: 0.9em;
+      height: auto;
+      min-height: 100vh;
+      overflow-y: auto;
     }
 
     #terminal {
-      transform: scale(0.9);
-      transform-origin: top left;
-      padding: 15px;
+      padding: 16px;
+      height: auto;
+      max-width: 100%;
+      transform: none;
     }
 
     input {
-      font-size: 0.9em;
+      font-size: 0.95em;
     }
 
     .banner-ocr {
-      font-size: 1.6em;
-      margin-bottom: 0.5em;
+      font-size: 1.5em;
+      margin-bottom: 0.75em;
     }
 
     .banner-ocr code {
-      font-size: 0.9em;
+      font-size: 0.95em;
     }
   }
 
@@ -496,12 +500,12 @@ const commands = {
   <i class="fa-solid fa-envelope fa-fw"></i> contact      - How to reach Cathal
   <i class="fa-solid fa-broom fa-fw"></i> clear        - Clear the terminal`,
 
-  about: `Hello! I’m Cathal, a third-year Mathematics student at the University of Warwick, specialising in machine learning with a focus on deep learning for speech. My research explores training-free emotion and S-SIM augmentation techniques in text-to-speech systems. Beyond research, I’ve been a cellist since I was four (with a particular love for Schubert’s String Quintet in C Major, D. 956), and I’m a committed CrossFitter working towards competing in HYROX. I am also running Instagram account that posts interesting science clips! If you are interested have a look at contacts section.`,
+  about: `Hello! I’m Cathal, a third-year Mathematics student at the University of Warwick, specialising in machine learning with a focus on deep learning for speech. My research explores training-free emotion and S-SIM augmentation techniques in text-to-speech systems. Beyond research, I’ve been a cellist since I was four (with a particular love for Schubert’s String Quintet in C Major, D. 956), and I’m a committed CrossFitter working towards competing in HYROX.`,
 
   skills: `Core skills:
   <i class="fa-solid fa-brain fa-fw"></i> Machine learning & deep learning
   <i class="fa-solid fa-wave-square fa-fw"></i> Mathematical Background with Algorithmic Approach
-  <i class="fa-solid fa-network-wired fa-fw"></i> Signal Processing & Probabilistic Modelling
+  <i class="fa-solid fa-network-wired fa-fw"></i> Signal Processing & Probabilistic, PDE Modelling
   <i class="fa-solid fa-gears fa-fw"></i> MLOps, experiment tooling, and evaluation pipelines
   <i class="fa-solid fa-code fa-fw"></i> 
   <i class="fa-solid fa-diagram-project fa-fw"></i> Systems thinking & end‑to‑end product focus`,
@@ -511,7 +515,7 @@ const commands = {
   <i class="fa-solid fa-robot fa-fw"></i> PyTorch, TensorFlow, Sciki-Learn
   <i class="fa-solid fa-wave-square fa-fw"></i> torchaudio, librosa, HF Transformers
   <i class="fa-brands fa-docker fa-fw"></i> CI/CD with Docker, basic Kubernetes & AWS
-  <i class="fa-brands fa-linux fa-fw"></i> Linux, shell, tmux, git
+  <i class="fa-brands fa-linux fa-fw"></i> Linux, Shell, Tmux, Git
   <i class="fa-brands fa-react fa-fw"></i> React, TypeScript, Tailwind CSS`,
 
   projects: `Selected projects:
