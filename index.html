@@ -243,7 +243,7 @@
       #b4f29b,  /* mint lime */
       #facc6b,  /* soft yellow */
       #f9a8d4,  /* pastel pink */
-      #fb7185   /* soft red */
+      #f6415c   /* soft red */
     );
     background-size: 200% 100%;
     -webkit-background-clip: text;
@@ -388,8 +388,8 @@
       opacity: 1;
       transform: translateY(0) scale(1.03);
       text-shadow:
-        0 0 18px rgba(136, 192, 208, 0.9),
-        0 0 26px rgba(180, 142, 173, 0.7);
+        0 0 18px rgba(90, 195, 224, 0.9),
+        0 0 26px rgba(186, 128, 175, 0.7);
     }
     100% {
       opacity: 1;
@@ -459,7 +459,7 @@
       </span>
     </div>
 
-    <span class="banner-title-gradient">Type 'help' to list available commands.</span>
+    <span class="banner-title-gradient">Welcome to CathOS, my digital Porfolio! Type 'help' to list available commands.</span>
 
 
     <div class="status-box hidden" id="status-box"></div>
@@ -500,7 +500,7 @@ const commands = {
   <i class="fa-solid fa-wave-square fa-fw"></i> Mathematical Background with Algorithmic Approach
   <i class="fa-solid fa-network-wired fa-fw"></i> Signal Processing & Probabilistic, PDE Modelling
   <i class="fa-solid fa-gears fa-fw"></i> MLOps, experiment tooling, and evaluation pipelines
-  <i class="fa-solid fa-code fa-fw"></i> 
+  <i class="fa-solid fa-code fa-fw"></i> AI fine-tuning, Diffusion Transformers
   <i class="fa-solid fa-diagram-project fa-fw"></i> Systems thinking & end‑to‑end product focus`,
 
   technologies: `Key technologies:
@@ -574,6 +574,8 @@ function renderStatusBox(userId, sessionKey) {
   const statusBox = document.getElementById('status-box');
   if (!statusBox) return;
 
+  const accessTime = new Date().toLocaleString();
+
   statusBox.innerHTML =
 `+-----------------------------------------------------------+
 | <span class="log-accent-purple">TERMINAL</span> v3.1.4f [<span class="log-accent-pink">SYNTAX CORE: ONLINE</span>]                    |
@@ -584,6 +586,7 @@ function renderStatusBox(userId, sessionKey) {
 | <span class="log-accent-purple">CathOS Terminal Interface v.3</span>                             |
 | ©<span class="log-accent-pink">2025</span> Hoon                                                |
 +-----------------------------------------------------------+
+| TIME OF ACCESS: <span class="log-accent-pink">${accessTime}</span>                             |
 | Session key: <span class="log-accent-purple">${sessionKey}</span>                             |
 | Welcome back, <span class="log-accent-red">${userId}</span>.                                |
 +-----------------------------------------------------------+`;
