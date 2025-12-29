@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CathOS</title>
+
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Roboto+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/ocr-a-std" rel="stylesheet">
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+
+<!-- Markdown parser (marked.js) -->
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/lib/marked.umd.min.js"></script>
+
+<style>
+  :root {
+    --bg: #050608;
+    --bg-soft: #080b10;
+    --fg: #fefce8;        /* main text color */
+    --muted: #e5e7eb;     /* log text color */
+    --accent: #7de2ff;    /* prompt/link color */
+    --accent-alt: #b4f29b;/* icon highlight */
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
+    color: var(--fg);
+    font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
+    letter-spacing: 0.04em;
+    /* Dot pattern background */
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(circle, rgba(148, 163, 184, 0.22) 1px, transparent 1px);
+    background-size: 18px 18px;
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.05) 0,
+      rgba(255, 255, 255, 0.05) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    mix-blend-mode: soft-light;
+    opacity: 0.14;
+    animation: scanlines 9s linear infinite;
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(circle, rgba(255, 255, 255, 0.16) 1px, transparent 1px);
+    background-size: 3px 3px;
+    opacity: 0.18;
+    mix-blend-mode: soft-light;
+  }
+
+  #terminal {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 32px clamp(20px, 8vw, 120px);
+    height: 100vh;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    border: none;
+    box-shadow: none;
+    background-color: transparent;
+    animation: terminal-boot 0.7s ease-out;
+  }
+
+  .prompt {
+    color: var(--accent);
+  }
+
+  input {
+    background: none;
+    border: none;
+    color: var(--fg);
+    font-family: inherit;
+    font-size: 1em;
+    width: 80%;
+    outline: none;
+  }
+
+  /* Prompt line style */
+  .prompt-line {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background-color: rgba(15, 23, 42, 0.9);
+    box-shadow:
+      0 0 0 1px rgba(148, 163, 184, 0.55),
+      0 0 10px rgba(15, 23, 42, 0.9);
+    /* prompt/output spacing */
+    margin: 2.3rem 0 1.2rem;
+  }
+
+  .prefix {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.12ch;
+    white-space: nowrap;
+  }
+
+  .prefix .user {
+    color: var(--accent);
+    font-weight: bold;
+  }
+
+  .prefix .host,
+  .prefix .path {
+    color: var(--accent-alt);
+  }
+
+  .prefix .dollar {
+    color: var(--fg);
+  }
+
+  ::selection {
+    background: var(--fg);
+    color: #000;
+  }
+
+  a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+
+  .banner {
+    color: var(--accent);
+    font-weight: bold;
+    margin-bottom: 1em;
+    text-align: center;
+  }
+
+  .banner-ascii {
+    white-space: pre;
+    font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
+    text-shadow: 0 0 12px rgba(136, 192, 208, 0.45);
+    max-width: 80ch;
+    /* logo/status spacing */
+    margin: 0 auto 0.4rem;
+  }
+
+  /* Logo frame box */
+  .banner-ascii-box {
+    display: inline-flex;
+    /* logo left align */
+    align-items: center;
+    justify-content: flex-start;
+    /* fine-tune padding */
+    padding: 8px 34px 8px 6px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.55);
+    background-color: rgba(8, 11, 16, 0.92);
+    box-shadow:
+      0 0 0 1px rgba(15, 23, 42, 0.95),
+      0 0 32px rgba(15, 23, 42, 0.95);
+  }
+
+  /* Boot log box */
+  .boot-box {
+    display: block;
+    /* center, compact */
+    margin: 1.5rem auto 1rem;
+    padding: 6px 12px 6px;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    background-color: rgba(8, 11, 16, 0.9);
+    box-shadow:
+      0 0 0 1px rgba(15, 23, 42, 0.95),
+      0 0 24px rgba(15, 23, 42, 0.95);
+  }
+
+  .boot-box.boot-box-animated {
+    animation: boot-box-pop 0.45s ease-out;
+  }
+
+  /* Boot box fade */
+  .boot-box.boot-box-hide {
+    /* slower fade */
+    animation: boot-box-fade 0.55s ease forwards;
+  }
+
+  /* Boot text size */
+  .boot-box .typed-line {
+    font-size: 1em;
+    /* no max width */
+    max-width: none;
+    margin: 0;
+  }
+
+  /* Static status block */
+  .status-box {
+    /* center under logo */
+    display: inline-block;
+    /* tight status spacing */
+    margin: 0.12rem auto 0.001rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    white-space: pre;
+    font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
+    font-size: 0.95em;
+    color: var(--fg); /* base ivory */
+    text-align: left;
+    /* disable glow */
+    text-shadow: none;
+  }
+
+  /* Logo gradient text */
+  .banner-title-gradient {
+    background: linear-gradient(
+      90deg,
+      #7de2ff,  /* pastel cyan */
+      #a5f3fc,  /* light blue */
+      #b4f29b,  /* mint lime */
+      #facc6b,  /* soft yellow */
+      #f9a8d4,  /* pastel pink */
+      #fb7185   /* soft red */
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Logo extra anim */
+  .banner-ascii.banner-animated {
+    animation:
+      banner-pop 0.7s ease-out,
+      banner-glow 4s ease-in-out infinite 0.7s;
+  }
+
+  .banner-ocr {
+    display: none;
+    font-family: 'OCR A Std', monospace;
+    font-size: 1.5em;
+    letter-spacing: 0.05em;
+    line-height: 1.3em;
+    white-space: normal;
+  }
+
+  .banner-ocr code {
+    font-size: 0.9em;
+  }
+
+  @media (max-width: 700px) {
+    .banner-ascii {
+      display: none;
+    }
+    .banner-ocr {
+      display: block;
+    }
+
+    /* Small screen scale */
+    body {
+      font-size: 0.85em;
+    }
+
+    #terminal {
+      transform: scale(0.9);
+      transform-origin: top left;
+      padding: 15px;
+    }
+
+    input {
+      font-size: 0.9em;
+    }
+
+    .banner-ocr {
+      font-size: 1.6em;
+      margin-bottom: 0.5em;
+    }
+
+    .banner-ocr code {
+      font-size: 0.9em;
+    }
+  }
+
+  .typed-line {
+    display: block;
+    white-space: pre-wrap;
+    color: var(--muted);
+    animation: line-in 0.28s ease-out both;
+    max-width: 80ch;
+    margin: 0 auto;
+  }
+
+  i {
+    color: var(--accent-alt);
+    margin-right: 6px;
+  }
+  .banner-ocr .banner-subtext {
+    display: inline-block;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.7em;
+    letter-spacing: 0;
+    color: var(--fg);
+  }
+
+  /* Accent word colors */
+  .log-accent-pink {
+    color: #f9a8d4;
+  }
+  .log-accent-purple {
+    color: #c4b5fd;
+  }
+  .log-accent-red {
+    color: #fb7185;
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  @keyframes terminal-boot {
+    0% {
+      opacity: 0;
+      transform: scale(0.97);
+      box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.9),
+        0 0 6px rgba(136, 192, 208, 0.1);
+    }
+    60% {
+      opacity: 1;
+      transform: scale(1.01);
+      box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 1),
+        0 0 46px rgba(136, 192, 208, 0.4);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+      box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.9),
+        0 0 36px rgba(136, 192, 208, 0.25);
+    }
+  }
+
+  @keyframes scanlines {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(4px); }
+  }
+
+  @keyframes banner-glow {
+    0%, 100% {
+      text-shadow: 0 0 10px rgba(136, 192, 208, 0.4);
+    }
+    50% {
+      text-shadow:
+        0 0 18px rgba(136, 192, 208, 0.8),
+        0 0 26px rgba(180, 142, 173, 0.5);
+    }
+  }
+
+  /* Logo pop anim */
+  @keyframes banner-pop {
+    0% {
+      opacity: 0;
+      transform: translateY(4px) scale(0.96);
+      text-shadow: 0 0 4px rgba(136, 192, 208, 0.25);
+    }
+    60% {
+      opacity: 1;
+      transform: translateY(0) scale(1.03);
+      text-shadow:
+        0 0 18px rgba(136, 192, 208, 0.9),
+        0 0 26px rgba(180, 142, 173, 0.7);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      text-shadow:
+        0 0 10px rgba(136, 192, 208, 0.6),
+        0 0 18px rgba(180, 142, 173, 0.4);
+    }
+  }
+
+  /* Boot box pop */
+  @keyframes boot-box-pop {
+    0% {
+      opacity: 0;
+      transform: translateY(4px) scale(0.97);
+      box-shadow:
+        0 0 0 1px rgba(15, 23, 42, 0.7),
+        0 0 6px rgba(148, 163, 184, 0.2);
+    }
+    60% {
+      opacity: 1;
+      transform: translateY(0) scale(1.02);
+      box-shadow:
+        0 0 0 1px rgba(148, 163, 184, 0.7),
+        0 0 26px rgba(56, 189, 248, 0.45);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      box-shadow:
+        0 0 0 1px rgba(148, 163, 184, 0.55),
+        0 0 18px rgba(15, 23, 42, 0.9);
+    }
+  }
+
+  @keyframes boot-box-fade {
+    to {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
+  }
+
+  @keyframes line-in {
+    0% {
+      opacity: 0;
+      transform: translateY(3px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+</style>
+</head>
+<body>
+<div id="terminal">
+  <div class="banner banner-ascii hidden" id="banner-ascii">
+    <div class="banner-ascii-box">
+      <span class="banner-title-gradient">
+     █████╗  █████╗ ████████╗██╗  ██╗ █████╗ ██╗        ██╗ ██████╗ 
+    ██╔════╝██╔══██╗╚══██╔══╝██║  ██║██╔══██╗██║        ██║██╔═══██╗
+    ██║     ███████║   ██║   ███████║███████║██║        ██║██║   ██║
+    ██║     ██╔══██║   ██║   ██╔══██║██╔══██║██║        ██║██║   ██║
+    ╚██████╗██║  ██║   ██║   ██║  ██║██║  ██║███████╗██╗██║╚██████╔╝
+     ╚═════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝╚═╝ ╚═════╝ 
+      </span>
+    </div>
+
+    <span class="banner-title-gradient">Type 'help' to list available commands.</span>
+
+    <!-- 상태 블록 내용은 JS에서 동적으로 채움 (displayUserId / sessionKey 기반) -->
+    <div class="status-box hidden" id="status-box"></div>
+  </div>
+
+  <div class="banner banner-ocr hidden" id="banner-ocr">
+    CathOS<br>
+    <span class="banner-subtext">Type <code>help</code> to begin.</span>
+  </div>
+  <div class="prompt-line hidden">
+    <span class="prefix">
+      <span class="user">>>cath17</span>@<span class="host">github.io</span> : <span class="path">~</span> <span class="dollar">$</span>
+    </span>
+    <input id="commandInput" autofocus autocomplete="off" spellcheck="false" />
+  </div>
+</div>
+
+<script>
+const terminal = document.getElementById('terminal');
+const input = document.getElementById('commandInput');
+
+const bannerAsciiHTML = document.getElementById('banner-ascii').innerHTML;
+const bannerOcrHTML = document.getElementById('banner-ocr').innerHTML;
+
+const commands = {
+  help: `Available commands:
+  <i class="fa-solid fa-user fa-fw"></i> about        - Overview & background
+  <i class="fa-solid fa-lightbulb fa-fw"></i> skills       - Core technical skills
+  <i class="fa-solid fa-tools fa-fw"></i> technologies - Tools, stacks, and platforms
+  <i class="fa-solid fa-folder-open fa-fw"></i> projects     - Selected work & research
+  <i class="fa-solid fa-envelope fa-fw"></i> contact      - How to reach Cathal
+  <i class="fa-solid fa-broom fa-fw"></i> clear        - Clear the terminal`,
+
+  about: `Hello! I’m Cathal, a third-year Mathematics student at the University of Warwick, specialising in machine learning with a focus on deep learning for speech. My research explores training-free emotion and S-SIM augmentation techniques in text-to-speech systems. Beyond research, I’ve been a cellist since I was four (with a particular love for Schubert’s String Quintet in C Major, D. 956), and I’m a committed CrossFitter working towards competing in HYROX.`,
+
+  skills: `Core skills:
+  <i class="fa-solid fa-brain fa-fw"></i> Machine learning & deep learning
+  <i class="fa-solid fa-wave-square fa-fw"></i> Speech & audio signal processing
+  <i class="fa-solid fa-network-wired fa-fw"></i> Representation learning & sequence modelling
+  <i class="fa-solid fa-gears fa-fw"></i> MLOps, experiment tooling, and evaluation pipelines
+  <i class="fa-solid fa-code fa-fw"></i> Clean, testable code in Python / TypeScript
+  <i class="fa-solid fa-diagram-project fa-fw"></i> Systems thinking & end‑to‑end product focus`,
+
+  technologies: `Key technologies:
+  <i class="fa-brands fa-python fa-fw"></i> Python, NumPy, Pandas
+  <i class="fa-solid fa-robot fa-fw"></i> PyTorch, JAX, scikit-learn
+  <i class="fa-solid fa-wave-square fa-fw"></i> torchaudio, librosa, HF Transformers
+  <i class="fa-brands fa-docker fa-fw"></i> Docker, basic Kubernetes & cloud tooling
+  <i class="fa-brands fa-linux fa-fw"></i> Linux, shell, tmux, git
+  <i class="fa-brands fa-react fa-fw"></i> React, TypeScript, Tailwind CSS`,
+
+  projects: `Selected projects:
+  1. Training-Free S-SIM augmentation via Activation Steering
+  2. Fine-Tuning Emotion Controllable Text-to-Speech "VEVO" for Korean Language
+  3. Graph-Based Chatbot Design and Customisation System 
+  4. Character-Specific Chatbot via RAG`,
+
+  contact: `You can reach me at:
+  <i class="fa-solid fa-envelope fa-fw"></i> <a href="mailto:hlzh0610@gmail.com">hlzh0610@gmail.com</a>
+  <i class="fa-brands fa-github fa-fw"></i> <a href="https://github.com/cathal0317" target="_blank">github.com/cathal0317</a>`,
+
+  clear: 'CLEAR'
+};
+
+let history = [];
+let historyIndex = -1;
+let isTyping = false;
+
+// CathOS boot helpers
+
+const ID_LENGTH = 6;
+const HEX = "0123456789ABCDEF";
+
+function generateUserId() {
+  const letters = "abcdefghijklmnopqrstuvwxyz";
+  const numbers = "0123456789";
+  let id = "";
+  for (let i = 0; i < ID_LENGTH; i++) {
+    const useNumber = Math.random() < 0.3;
+    id += useNumber
+      ? numbers.charAt(Math.floor(Math.random() * numbers.length))
+      : letters.charAt(Math.floor(Math.random() * letters.length));
+  }
+  return `user-${id}`;
+}
+
+function generateSessionKey() {
+  const part = () => {
+    let s = "";
+    for (let i = 0; i < 4; i++) {
+      s += HEX.charAt(Math.floor(Math.random() * HEX.length));
+    }
+    return s;
+  };
+  return `0x${part()}-${part()}-${new Date().getFullYear()}`;
+}
+
+const displayUserId = generateUserId();
+const sessionKey = generateSessionKey();
+
+// Render status block
+function renderStatusBox(userId, sessionKey) {
+  const statusBox = document.getElementById('status-box');
+  if (!statusBox) return;
+
+  statusBox.innerHTML =
+`+-----------------------------------------------------------+
+| <span class="log-accent-purple">TERMINAL</span> v3.1.4f [<span class="log-accent-pink">SYNTAX CORE: ONLINE</span>]                    |
+| USER ID: <span class="log-accent-red">${userId}</span>                                      |
+| ACCESS LEVEL: <span class="log-accent-pink">guest</span>                                       |
+| PROTOCOL: <span class="log-accent-purple">Serenity SHELL-v.2.4.2</span> over <span class="log-accent-red">CathOS</span>              |
++-----------------------------------------------------------+
+| <span class="log-accent-purple">CathOS Terminal Interface v.3</span>                             |
+| ©<span class="log-accent-pink">2025</span> Hoon                                                |
++-----------------------------------------------------------+
+| Session key: <span class="log-accent-purple">${sessionKey}</span>                             |
+| Welcome back, <span class="log-accent-red">${userId}</span>.                                |
++-----------------------------------------------------------+`;
+}
+
+function printOutput(cmd, output) {
+  const newLine = document.createElement('div');
+  newLine.innerHTML = `<span class="prompt">&gt;</span> ${cmd}`;
+  terminal.insertBefore(newLine, input.parentElement);
+
+  if (output === 'CLEAR') {
+    terminal.innerHTML = '';
+
+    const bannerAscii = document.createElement('div');
+    bannerAscii.className = 'banner banner-ascii';
+    bannerAscii.innerHTML = bannerAsciiHTML;
+
+    const bannerOcr = document.createElement('div');
+    bannerOcr.className = 'banner banner-ocr';
+    bannerOcr.innerHTML = bannerOcrHTML;
+
+    terminal.appendChild(bannerAscii);
+    terminal.appendChild(bannerOcr);
+    terminal.appendChild(input.parentElement);
+    return;
+  }
+
+  const outLine = document.createElement('div');
+  outLine.classList.add('typed-line');
+  terminal.insertBefore(outLine, input.parentElement);
+
+  if (output) typeLineWithAccents(outLine, output);
+  else typeLineWithAccents(outLine, `Command not found: ${cmd}`);
+
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+function typeLine(element, text, speed = 5) {
+  isTyping = true;
+  if (/<\/?[a-z][\s\S]*>/i.test(text)) {
+    element.innerHTML = text;
+    isTyping = false;
+    terminal.scrollTop = terminal.scrollHeight;
+    return;
+  }
+  let i = 0;
+  (function type() {
+    if (i < text.length) {
+      element.textContent += text.charAt(i++);
+      terminal.scrollTop = terminal.scrollHeight;
+      setTimeout(type, speed);
+    } else {
+      isTyping = false;
+    }
+  })();
+}
+
+// Typed output accents
+function typeLineWithAccents(element, text, speed = 12) {
+  isTyping = true;
+
+  // Fallback for HTML
+  if (/<\/?[a-z][\s\S]*>/i.test(text)) {
+    element.innerHTML = text;
+    isTyping = false;
+    terminal.scrollTop = terminal.scrollHeight;
+    return;
+  }
+
+  const tokens = text.split(/(\s+)/); // keep spaces
+  const accentClasses = ['log-accent-pink', 'log-accent-purple', 'log-accent-red'];
+
+  const fragments = tokens.map(token => {
+    if (!token.trim()) {
+      return { text: token, className: null };
+    }
+    // 20% accent chance
+    const shouldAccent = Math.random() < 0.2;
+    const className = shouldAccent
+      ? accentClasses[Math.floor(Math.random() * accentClasses.length)]
+      : null;
+    return { text: token, className };
+  });
+
+  element.innerHTML = '';
+  const nodes = [];
+
+  fragments.forEach(frag => {
+    const span = document.createElement('span');
+    if (frag.className) span.className = frag.className;
+    element.appendChild(span);
+    nodes.push({ node: span, text: frag.text });
+  });
+
+  let fragIndex = 0;
+  let charIndex = 0;
+
+  (function typeNext() {
+    if (fragIndex >= nodes.length) {
+      isTyping = false;
+      return;
+    }
+
+    const current = nodes[fragIndex];
+
+    if (charIndex < current.text.length) {
+      current.node.textContent += current.text.charAt(charIndex++);
+      terminal.scrollTop = terminal.scrollHeight;
+      setTimeout(typeNext, speed);
+    } else {
+      fragIndex++;
+      charIndex = 0;
+      setTimeout(typeNext, speed);
+    }
+  })();
+}
+
+
+const bootLines = [
+  'CATHOS v1.0.0 [CORE SYSTEM: ONLINE]',
+  `USER ID: ${displayUserId}`,
+  'ACCESS LEVEL: guest',
+  'PROTOCOL: MonoTERM-shell v2.0',
+  '',
+  '> Loading cognitive modules ... [OK]',
+  '> Verifying shell integrity ... [OK]',
+  '> Establishing node connection ... [STABLE]',
+  '> Linking abstraction libraries ... [OK]',
+  '> Initialising proof kernel ... [WARNING]',
+  '> Kernel version outdated.',
+  '> Some functionalities may be limited.',
+  '> Verifying user credentials ... [OK]',
+  '> Initialising user environment ... [OK]',
+  '',
+  `Session key: ${sessionKey}`,
+  'Welcome.'
+];
+
+function runBootSequence() {
+  const bannerAscii = document.getElementById('banner-ascii');
+  const bannerOcr = document.getElementById('banner-ocr');
+  const statusBox = document.getElementById('status-box');
+
+  // Create boot box
+  const bootBox = document.createElement('div');
+  bootBox.className = 'boot-box';
+  terminal.insertBefore(bootBox, input.parentElement);
+
+  let index = 0;
+
+  function next() {
+    if (index >= bootLines.length) {
+      // Pop boot box
+      bootBox.classList.add('boot-box-animated');
+      // Fade then show UI
+      setTimeout(() => {
+        bootBox.classList.add('boot-box-hide');
+        setTimeout(() => {
+          if (bootBox.parentNode) bootBox.parentNode.removeChild(bootBox);
+          // Show logo, status, prompt
+          bannerAscii.classList.remove('hidden');
+          bannerOcr.classList.remove('hidden');
+          bannerAscii.classList.add('banner-animated');
+          if (statusBox) {
+            renderStatusBox(displayUserId, sessionKey);
+            statusBox.classList.remove('hidden');
+          }
+          input.parentElement.classList.remove('hidden');
+          input.focus();
+          terminal.scrollTop = terminal.scrollHeight;
+        }, 550);
+      }, 380);
+      return;
+    }
+
+    const outLine = document.createElement('div');
+    outLine.classList.add('typed-line');
+    bootBox.appendChild(outLine);
+    // Slightly slower boot
+    typeLineWithAccents(outLine, bootLines[index++], 6);
+
+    setTimeout(next, 190);
+  }
+
+  next();
+}
+
+runBootSequence();
+
+input.addEventListener('keydown', e => {
+  if (isTyping) return;
+
+  if (e.key === 'Enter') {
+    const cmd = input.value.trim();
+    if (cmd) {
+      history.push(cmd);
+      historyIndex = history.length;
+      printOutput(cmd, commands[cmd]);
+    }
+    input.value = '';
+  }
+
+  if (e.key === 'ArrowUp') {
+    if (historyIndex > 0) input.value = history[--historyIndex];
+    e.preventDefault();
+  }
+
+  if (e.key === 'ArrowDown') {
+    if (historyIndex < history.length - 1) input.value = history[++historyIndex];
+    else input.value = '';
+    e.preventDefault();
+  }
+
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const current = input.value.trim();
+    if (!current) return;
+    const matches = Object.keys(commands).filter(c => c.startsWith(current));
+    if (matches.length === 1) input.value = matches[0];
+    else if (matches.length > 1)
+      printOutput(current, `Possible commands:\n  ${matches.join('\n  ')}`);
+  }
+});
+</script>
+</body>
+</html>
