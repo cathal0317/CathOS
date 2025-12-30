@@ -574,7 +574,7 @@ function renderStatusBox(userId, sessionKey) {
   const statusBox = document.getElementById('status-box');
   if (!statusBox) return;
 
-  const accessTime = new Date().toLocaleString();
+
 
   statusBox.innerHTML =
 `+-----------------------------------------------------------+
@@ -586,7 +586,6 @@ function renderStatusBox(userId, sessionKey) {
 | <span class="log-accent-purple">CathOS Terminal Interface v.3</span>                             |
 | ©<span class="log-accent-pink">2025</span> Hoon                                                |
 +-----------------------------------------------------------+
-| TIME OF ACCESS: <span class="log-accent-pink">${accessTime}</span>                             |
 | Session key: <span class="log-accent-purple">${sessionKey}</span>                             |
 | Welcome back, <span class="log-accent-red">${userId}</span>.                                |
 +-----------------------------------------------------------+`;
