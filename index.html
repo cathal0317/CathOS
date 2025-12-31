@@ -779,9 +779,10 @@ input.addEventListener('keydown', e => {
   if (isTyping) return;
 
   if (e.key === 'Enter') {
-    const cmd = input.value.trim();
-    if (cmd) {
-      history.push(cmd);
+    const rawCmd = input.value.trim();
+    const cmd = rawCmd.toLowerCase();
+    if (rawCmd) {
+      history.push(rawCmd);
       historyIndex = history.length;
       printOutput(cmd, commands[cmd]);
     }
@@ -801,7 +802,7 @@ input.addEventListener('keydown', e => {
 
   if (e.key === 'Tab') {
     e.preventDefault();
-    const current = input.value.trim();
+    const current = input.value.trim().toLowerCase();
     if (!current) return;
     const matches = Object.keys(commands).filter(c => c.startsWith(current));
     if (matches.length === 1) input.value = matches[0];
