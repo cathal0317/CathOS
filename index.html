@@ -546,6 +546,8 @@ let history = [];
 let historyIndex = -1;
 let isTyping = false;
 
+// Track current typing animation so we can skip/finish it
+let typingState = null;
 
 const ID_LENGTH = 6;
 const HEX = "0123456789ABCDEF";
@@ -633,20 +635,34 @@ function printOutput(cmd, output) {
 
 function typeLine(element, text, speed = 5) {
   isTyping = true;
+
+  // If text contains HTML, render immediately
   if (/<\/?[a-z][\s\S]*>/i.test(text)) {
     element.innerHTML = text;
     isTyping = false;
+    typingState = null;
     terminal.scrollTop = terminal.scrollHeight;
     return;
   }
-  let i = 0;
+
+  typingState = {
+    mode: 'plain',
+    element,
+    text,
+    index: 0,
+    timeoutId: null
+  };
+
   (function type() {
-    if (i < text.length) {
-      element.textContent += text.charAt(i++);
+    if (!typingState || typingState.mode !== 'plain') return;
+
+    if (typingState.index < typingState.text.length) {
+      element.textContent += typingState.text.charAt(typingState.index++);
       terminal.scrollTop = terminal.scrollHeight;
-      setTimeout(type, speed);
+      typingState.timeoutId = setTimeout(type, speed);
     } else {
       isTyping = false;
+      typingState = null;
     }
   })();
 }
@@ -659,6 +675,7 @@ function typeLineWithAccents(element, text, speed = 12) {
   if (/<\/?[a-z][\s\S]*>/i.test(text)) {
     element.innerHTML = text;
     isTyping = false;
+    typingState = null;
     terminal.scrollTop = terminal.scrollHeight;
     return;
   }
@@ -688,27 +705,63 @@ function typeLineWithAccents(element, text, speed = 12) {
     nodes.push({ node: span, text: frag.text });
   });
 
-  let fragIndex = 0;
-  let charIndex = 0;
+  typingState = {
+    mode: 'accent',
+    nodes,
+    fragIndex: 0,
+    charIndex: 0,
+    timeoutId: null
+  };
 
   (function typeNext() {
-    if (fragIndex >= nodes.length) {
+    if (!typingState || typingState.mode !== 'accent') return;
+
+    if (typingState.fragIndex >= typingState.nodes.length) {
       isTyping = false;
+      typingState = null;
       return;
     }
 
-    const current = nodes[fragIndex];
+    const current = typingState.nodes[typingState.fragIndex];
 
-    if (charIndex < current.text.length) {
-      current.node.textContent += current.text.charAt(charIndex++);
+    if (typingState.charIndex < current.text.length) {
+      current.node.textContent += current.text.charAt(typingState.charIndex++);
       terminal.scrollTop = terminal.scrollHeight;
-      setTimeout(typeNext, speed);
+      typingState.timeoutId = setTimeout(typeNext, speed);
     } else {
-      fragIndex++;
-      charIndex = 0;
-      setTimeout(typeNext, speed);
+      typingState.fragIndex++;
+      typingState.charIndex = 0;
+      typingState.timeoutId = setTimeout(typeNext, speed);
     }
   })();
+}
+
+function finishTypingNow() {
+  if (!typingState) return;
+
+  if (typingState.mode === 'plain') {
+    const { element, text, index } = typingState;
+    if (index < text.length) {
+      element.textContent += text.slice(index);
+    }
+  } else if (typingState.mode === 'accent') {
+    const { nodes, fragIndex, charIndex } = typingState;
+    for (let fi = fragIndex; fi < nodes.length; fi++) {
+      const node = nodes[fi];
+      const start = fi === fragIndex ? charIndex : 0;
+      if (start < node.text.length) {
+        node.node.textContent += node.text.slice(start);
+      }
+    }
+  }
+
+  if (typingState.timeoutId) {
+    clearTimeout(typingState.timeoutId);
+  }
+
+  isTyping = false;
+  typingState = null;
+  terminal.scrollTop = terminal.scrollHeight;
 }
 
 
@@ -784,7 +837,13 @@ function runBootSequence() {
 runBootSequence();
 
 input.addEventListener('keydown', e => {
-  if (isTyping) return;
+  if (isTyping) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      finishTypingNow();
+    }
+    return;
+  }
 
   if (e.key === 'Enter') {
     const rawCmd = input.value.trim();
