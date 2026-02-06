@@ -81,6 +81,7 @@
     padding: 32px clamp(20px, 8vw, 120px);
     height: 100vh;
     overflow-y: auto;
+    overflow-x: auto;
     white-space: pre-wrap;
     border: none;
     box-shadow: none;
@@ -114,7 +115,7 @@
       0 0 0 1px rgba(148, 163, 184, 0.55),
       0 0 10px rgba(15, 23, 42, 0.9);
     /* prompt/output spacing */
-    margin: 2.3rem 0 1.2rem;
+    margin: 1.2rem 0 1.0rem;
   }
 
   .prefix {
@@ -197,6 +198,7 @@
     border-radius: 8px;
     border: 1px solid rgba(148, 163, 184, 0.4);
     background-color: rgba(8, 11, 16, 0.9);
+    overflow-x: auto;
     box-shadow:
       0 0 0 1px rgba(15, 23, 42, 0.95),
       0 0 24px rgba(15, 23, 42, 0.95);
@@ -216,8 +218,10 @@
   .boot-box .typed-line {
     font-size: 1em;
     /* no max width */
-    max-width: none;
+    max-width: 90ch;
     margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
 
   /* Static status block */
@@ -225,7 +229,7 @@
     /* center under logo */
     display: inline-block;
     /* tight status spacing */
-    margin: 0.12rem auto 0.001rem;
+    margin: 0.0rem auto 0;
     padding: 0;
     border: none;
     background: transparent;
@@ -243,11 +247,11 @@
   .banner-title-gradient {
     background: linear-gradient(
       90deg,
-      #7de2ff,  /* pastel cyan */
+      #1579e6,  /* deeper cyan */
       #a5f3fc,  /* light blue */
       #b4f29b,  /* mint lime */
       #facc6b,  /* soft yellow */
-      #f9a8d4,  /* pastel pink */
+      #db2777,  /* deeper pink */
       #f6415c   /* soft red */
     );
     background-size: 200% 100%;
@@ -309,9 +313,11 @@
   .typed-line {
     display: block;
     white-space: pre-wrap;
+    word-break: break-word;
     color: var(--muted);
     animation: line-in 0.28s ease-out both;
-    max-width: 80ch;
+    max-width: 90ch;
+    width: 100%;
     margin: 0 auto;
   }
 
@@ -491,14 +497,14 @@ const bannerOcrHTML = document.getElementById('banner-ocr').innerHTML;
 
 const commands = {
   help: `Available commands:
-  <i class="fa-solid fa-user fa-fw"></i> about        - Overview & Background
-  <i class="fa-solid fa-folder-open fa-fw"></i> projects     - Selected work & Research
-  <i class="fa-solid fa-lightbulb fa-fw"></i> skills       - Core Technical Skills
+  <i class="fa-solid fa-folder-open fa-fw"></i> projects    - Selected work & Research
+  <i class="fa-solid fa-user fa-fw"></i> about       - Overview & Background
+  <i class="fa-solid fa-lightbulb fa-fw"></i> skills      - Core Technical Skills
   <i class="fa-solid fa-tools fa-fw"></i> technologies - Tools, Stacks, and Platforms
-  <i class="fa-solid fa-envelope fa-fw"></i> contact      - How to reach Me
+  <i class="fa-solid fa-envelope fa-fw"></i> contact      - GitHub, Email and CV
   <i class="fa-solid fa-broom fa-fw"></i> clear        - Clear the Terminal`,
 
-  about: `Hello! I’m Cathal, a third-year Mathematics student at the University of Warwick, specialising in machine learning with a focus on Diffusion Transformers and deep learning for speech. My research explores Training-Free S-SIM augmentation via Sequential Monte-Carlo Reward Alignment in Text-to-Speech systems. Beyond research, I’ve been a cellist since I was six (with a particular love for Schubert’s String Quintet in C Major, D. 956), and I’m a committed CrossFitter working towards competing in HYROX.`,
+  about: `Hello, I’m Cathal, a third-year Mathematics student at the University of Warwick focused on ML for speech. I build inference-time methods for diffusion/flow-based TTS, including SMC-style reward alignment and activation steering. Outside of ML, I’ve played the cello since I was six and I train for HYROX.`,
 
   skills: `Core skills:
   <i class="fa-solid fa-brain fa-fw"></i> Machine learning & Deep learning with Understanding in Transformer Architectures 
@@ -517,12 +523,15 @@ const commands = {
   <i class="fa-brands fa-react fa-fw"></i> API Integrations, LangChain4j, Retrieval-Augmented Generation`,
 
   projects: `Selected projects:
-  1. Training-Free Emotion Control via Activation Steering
-     - <a href="https://github.com/cathal0317/emosteer-tts-unofficial" target="_blank" rel="noopener noreferrer">GitHub: Paper</a>
+  
+  1. Emosteer — training-free emotion control for TTS.
+     Built activation steering + emotion2vec top‑k masking (PyTorch, DiT).
+     Github: <a href="https://github.com/cathal0317/emosteer-tts-unofficial" target="_blank" rel="noopener noreferrer">GitHub: emosteer-unofficial</a>
   2. Fine-Tuning Emotion Controllable Text-to-Speech "VEVO" for Korean Language
      - <a href="https://github.com/cathal0317/vevo" target="_blank" rel="noopener noreferrer">GitHub: VEVO</a>
-  3. Graph-Based Chatbot Design and Customisation System
-     - <a href="https://github.com/cathal0317/chatbot-graph-builder" target="_blank" rel="noopener noreferrer">GitHub: Chatbot-Graph-Builder</a>
+  3. Sohri — JSON → graph dialogue manager.
+     Built state tracking + validation with Redis + FastAPI + Nginx.
+     Github: <a href="https://github.com/cathal0317/chatbot-graph-builder" target="_blank" rel="noopener noreferrer">GitHub: Chatbot-Graph-Builder</a>
   4. Character-Specific Chatbot via RAG
      - <a href="https://github.com/cathal0317/study" target="_blank" rel="noopener noreferrer">GitHub: study</a>
   5. Daily Algoithm Practice
@@ -531,8 +540,9 @@ const commands = {
      - <a href="https://github.com/cathal0317/Physics_Modelling" target="_blank" rel="noopener noreferrer">GitHub: Physics_Modelling</a>
   7. Research paper on Group Theory and Music Theory
      - <a href="Cathal_Essay.pdf" target="_blank" rel="noopener noreferrer">Group Theory Behind Triadic Chordal Transformation of Music Theory</a>
-  8. Research paper on Training-Free S-SIM augmentation via Sequential Monte-Carlo Reward Alignment
-     - [In Preparation] <a href="https://github.com/cathal0317/Reward_Alignment-Test" target="_blank" rel="noopener noreferrer">GitHub: Reward_Alignment via CFM backbone</a>`,
+  8. SMC reward alignment for DiT‑TTS.
+     Implemented ODE→SDE, resampling, ESS threshold, beta‑anneal.
+     Github: <a href="https://github.com/cathal0317/Reward_Alignment-Test" target="_blank" rel="noopener noreferrer">GitHub: Reward-Alignemnt-Test</a>`,
 
   contact: `You can reach me at:
   <i class="fa-solid fa-envelope fa-fw"></i> <a href="mailto:hlzh0610@gmail.com">hlzh0610@gmail.com</a>
@@ -594,8 +604,10 @@ function renderStatusBox(userId, sessionKey) {
 | PROTOCOL: <span class="log-accent-purple">Serenity SHELL-v.2.4.2</span> over <span class="log-accent-red">CathOS</span>              |
 +-----------------------------------------------------------+
 | <span class="log-accent-purple">CathOS Terminal Interface v.3</span>                             |
-| ©<span class="log-accent-pink">2025</span> Hoon                                                |
+| ©<span class="log-accent-pink">2025</span> cathoon                                             |
 +-----------------------------------------------------------+
+| CORE DIAGNOSTIC: <span class="log-accent-pink">PASSED</span>                                   |
+| MEMORY TRACE: <span class="log-accent-purple">COHERENT</span>                                    |
 | Session key: <span class="log-accent-purple">${sessionKey}</span>                             |
 | Welcome back, <span class="log-accent-red">${userId}</span>.                                |
 +-----------------------------------------------------------+`;
@@ -668,7 +680,7 @@ function typeLine(element, text, speed = 5) {
 }
 
 // Typed output accents
-function typeLineWithAccents(element, text, speed = 12) {
+function typeLineWithAccents(element, text, speed = 12, accentChance = 0.2) {
   isTyping = true;
 
   // Fallback for HTML
@@ -687,8 +699,8 @@ function typeLineWithAccents(element, text, speed = 12) {
     if (!token.trim()) {
       return { text: token, className: null };
     }
-    // 20% accent chance
-    const shouldAccent = Math.random() < 0.2;
+    // Accent chance
+    const shouldAccent = Math.random() < accentChance;
     const className = shouldAccent
       ? accentClasses[Math.floor(Math.random() * accentClasses.length)]
       : null;
@@ -766,7 +778,8 @@ function finishTypingNow() {
 
 
 const bootLines = [
-  'CATHOS v1.0.0 [CORE SYSTEM: ONLINE]',
+  'CATHOS v3.1.4',
+  '[CORE SYSTEM: ONLINE]',
   `USER ID: ${displayUserId}`,
   'ACCESS LEVEL: guest',
   'PROTOCOL: MonoTERM-shell v2.0',
@@ -774,10 +787,9 @@ const bootLines = [
   '> Loading cognitive modules ... [OK]',
   '> Verifying shell integrity ... [OK]',
   '> Establishing node connection ... [STABLE]',
-  '> Linking abstraction libraries ... [OK]',
+
   '> Initialising proof kernel ... [WARNING]',
   '> Kernel version outdated.',
-  '> Some functionalities may be limited.',
   '> Verifying user credentials ... [OK]',
   '> Initialising user environment ... [OK]',
   '',
@@ -826,7 +838,7 @@ function runBootSequence() {
     outLine.classList.add('typed-line');
     bootBox.appendChild(outLine);
     // Slightly slower boot
-    typeLineWithAccents(outLine, bootLines[index++], 6);
+    typeLineWithAccents(outLine, bootLines[index++], 6, 0.45);
 
     setTimeout(next, 190);
   }
@@ -847,11 +859,19 @@ input.addEventListener('keydown', e => {
 
   if (e.key === 'Enter') {
     const rawCmd = input.value.trim();
-    const cmd = rawCmd.toLowerCase();
+    const parts = rawCmd.split(/\s+/);
+    const cmd = parts[0]?.toLowerCase();
+    const arg = parts.slice(1).join(' ');
     if (rawCmd) {
       history.push(rawCmd);
       historyIndex = history.length;
-      printOutput(cmd, commands[cmd]);
+      let output;
+      if (cmd === 'open' || cmd === 'project') {
+        output = handleOpenCommand(arg);
+      } else {
+        output = commands[cmd];
+      }
+      printOutput(rawCmd, output);
     }
     input.value = '';
   }
