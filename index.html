@@ -1,902 +1,99 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CathOS</title>
-
-<!-- Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Roboto+Mono&display=swap" rel="stylesheet">
-<link href="https://fonts.cdnfonts.com/css/ocr-a-std" rel="stylesheet">
-
-<!-- Font Awesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-
-<!-- Markdown parser (marked.js) -->
-<script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/lib/marked.umd.min.js"></script>
-
-<style>
-  :root {
-    --bg: #050608;
-    --bg-soft: #080b10;
-    --fg: #fefce8;        /* main text color */
-    --muted: #e5e7eb;     /* log text color */
-    --accent: #7de2ff;    /* prompt/link color */
-    --accent-alt: #b4f29b;/* icon highlight */
-  }
-
-  body {
-    margin: 0;
-    padding: 0;
-    height: 100vh;
-    overflow: hidden;
-    color: var(--fg);
-    font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
-    letter-spacing: 0.04em;
-    /* Dot pattern background */
-    background-color: var(--bg);
-    background-image:
-      radial-gradient(circle, rgba(148, 163, 184, 0.22) 1px, transparent 1px);
-    background-size: 18px 18px;
-    position: relative;
-    display: flex;
-    align-items: stretch;
-    justify-content: center;
-  }
-
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background-image: repeating-linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.05) 0,
-      rgba(255, 255, 255, 0.05) 1px,
-      transparent 1px,
-      transparent 3px
-    );
-    mix-blend-mode: soft-light;
-    opacity: 0.14;
-    animation: scanlines 9s linear infinite;
-  }
-
-  body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background-image:
-      radial-gradient(circle, rgba(255, 255, 255, 0.16) 1px, transparent 1px);
-    background-size: 3px 3px;
-    opacity: 0.18;
-    mix-blend-mode: soft-light;
-  }
-
-  #terminal {
-    box-sizing: border-box;
-    width: 100%;
-    max-width: none;
-    margin: 0;
-    padding: 32px clamp(20px, 8vw, 120px);
-    height: 100vh;
-    overflow-y: auto;
-    overflow-x: auto;
-    white-space: pre-wrap;
-    border: none;
-    box-shadow: none;
-    background-color: transparent;
-    animation: terminal-boot 0.7s ease-out;
-  }
-
-  .prompt {
-    color: var(--accent);
-  }
-
-  input {
-    background: none;
-    border: none;
-    color: var(--fg);
-    font-family: inherit;
-    font-size: 1em;
-    width: 80%;
-    outline: none;
-  }
-
-  /* Prompt line style */
-  .prompt-line {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 2px 6px;
-    border-radius: 6px;
-    background-color: rgba(15, 23, 42, 0.9);
-    box-shadow:
-      0 0 0 1px rgba(148, 163, 184, 0.55),
-      0 0 10px rgba(15, 23, 42, 0.9);
-    /* prompt/output spacing */
-    margin: 1.2rem 0 1.0rem;
-  }
-
-  .prefix {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.12ch;
-    white-space: nowrap;
-  }
-
-  .prefix .user {
-    color: var(--accent);
-    font-weight: bold;
-  }
-
-  .prefix .host,
-  .prefix .path {
-    color: var(--accent-alt);
-  }
-
-  .prefix .dollar {
-    color: var(--fg);
-  }
-
-  ::selection {
-    background: var(--fg);
-    color: #000;
-  }
-
-  a {
-    color: var(--accent);
-    text-decoration: none;
-  }
-  a:hover {
-    text-decoration: underline;
-  }
-
-  .banner {
-    color: var(--accent);
-    font-weight: bold;
-    margin-bottom: 1em;
-    text-align: center;
-  }
-
-  .banner-ascii {
-    white-space: pre;
-    font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
-    text-shadow: 0 0 12px rgba(136, 192, 208, 0.45);
-    max-width: 80ch;
-    /* logo/status spacing */
-    margin: 0 auto 0.4rem;
-  }
-
-  .banner-subline {
-    display: inline-block;
-    transform: translateX(-30px);
-  }
-
-  /* Logo frame box */
-  .banner-ascii-box {
-    display: inline-flex;
-    /* logo left align */
-    align-items: center;
-    justify-content: flex-start;
-    /* fine-tune padding */
-    padding: 8px 34px 8px 6px;
-    border-radius: 12px;
-    border: 1px solid rgba(148, 163, 184, 0.55);
-    background-color: rgba(8, 11, 16, 0.92);
-    box-shadow:
-      0 0 0 1px rgba(15, 23, 42, 0.95),
-      0 0 32px rgba(15, 23, 42, 0.95);
-  }
-
-  /* Boot log box */
-  .boot-box {
-    display: block;
-    /* center, compact */
-    margin: 1.5rem auto 1rem;
-    padding: 6px 12px 6px;
-    border-radius: 8px;
-    border: 1px solid rgba(148, 163, 184, 0.4);
-    background-color: rgba(8, 11, 16, 0.9);
-    overflow-x: auto;
-    box-shadow:
-      0 0 0 1px rgba(15, 23, 42, 0.95),
-      0 0 24px rgba(15, 23, 42, 0.95);
-  }
-
-  .boot-box.boot-box-animated {
-    animation: boot-box-pop 0.45s ease-out;
-  }
-
-  /* Boot box fade */
-  .boot-box.boot-box-hide {
-    /* slower fade */
-    animation: boot-box-fade 0.55s ease forwards;
-  }
-
-  /* Boot text size */
-  .boot-box .typed-line {
-    font-size: 1em;
-    /* no max width */
-    max-width: 90ch;
-    margin: 0;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-
-  /* Static status block */
-  .status-box {
-    /* center under logo */
-    display: inline-block;
-    /* tight status spacing */
-    margin: 0.0rem auto 0;
-    padding: 0;
-    border: none;
-    background: transparent;
-    box-shadow: none;
-    white-space: pre;
-    font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
-    font-size: 0.95em;
-    color: var(--fg); /* base ivory */
-    text-align: left;
-    /* disable glow */
-    text-shadow: none;
-  }
-
-  /* Logo gradient text */
-  .banner-title-gradient {
-    background: linear-gradient(
-      90deg,
-      #1579e6,  /* deeper cyan */
-      #a5f3fc,  /* light blue */
-      #b4f29b,  /* mint lime */
-      #facc6b,  /* soft yellow */
-      #db2777,  /* deeper pink */
-      #f6415c   /* soft red */
-    );
-    background-size: 200% 100%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-
-  /* Logo extra anim */
-  .banner-ascii.banner-animated {
-    animation:
-      banner-pop 0.7s ease-out,
-      banner-glow 4s ease-in-out infinite 0.7s;
-  }
-
-  .banner-ocr {
-    display: none;
-    font-family: 'OCR A Std', monospace;
-    font-size: 1.5em;
-    letter-spacing: 0.05em;
-    line-height: 1.3em;
-    white-space: normal;
-  }
-
-  .banner-ocr code {
-    font-size: 0.9em;
-  }
-
-  @media (max-width: 700px) {
-    /* Show ASCII logo on mobile too */
-    .banner-ascii {
-      display: block;
-    }
-    .banner-ocr {
-      display: none;
-    }
-
-    /* Small screen layout: no fixed viewport, no scaling hack */
-    body {
-      font-size: 0.9em;
-      height: auto;
-      min-height: 100vh;
-      overflow-y: auto;
-    }
-
-    #terminal {
-      padding: 16px;
-      height: auto;
-      max-width: 100%;
-      transform: none;
-      overflow-x: auto; /* allow horizontal scroll for wide ASCII art */
-    }
-
-    input {
-      font-size: 0.95em;
-    }
-  }
-
-  .typed-line {
-    display: block;
-    white-space: pre-wrap;
-    word-break: break-word;
-    color: var(--muted);
-    animation: line-in 0.28s ease-out both;
-    max-width: 90ch;
-    width: 100%;
-    margin: 0 auto;
-  }
-
-  i {
-    color: var(--accent-alt);
-    margin-right: 6px;
-  }
-  .banner-ocr .banner-subtext {
-    display: inline-block;
-    font-family: 'Roboto Mono', monospace;
-    font-size: 0.7em;
-    letter-spacing: 0;
-    color: var(--fg);
-  }
-
-  /* Accent word colors */
-  .log-accent-pink {
-    color: #f9a8d4;
-  }
-  .log-accent-purple {
-    color: #c4b5fd;
-  }
-  .log-accent-red {
-    color: #fb7185;
-  }
-
-  .hidden {
-    display: none;
-  }
-
-  @keyframes terminal-boot {
-    0% {
-      opacity: 0;
-      transform: scale(0.97);
-      box-shadow:
-        0 0 0 1px rgba(0, 0, 0, 0.9),
-        0 0 6px rgba(136, 192, 208, 0.1);
-    }
-    60% {
-      opacity: 1;
-      transform: scale(1.01);
-      box-shadow:
-        0 0 0 1px rgba(0, 0, 0, 1),
-        0 0 46px rgba(136, 192, 208, 0.4);
-    }
-    100% {
-      opacity: 1;
-      transform: scale(1);
-      box-shadow:
-        0 0 0 1px rgba(0, 0, 0, 0.9),
-        0 0 36px rgba(136, 192, 208, 0.25);
-    }
-  }
-
-  @keyframes scanlines {
-    0% { transform: translateY(0); }
-    100% { transform: translateY(4px); }
-  }
-
-  @keyframes banner-glow {
-    0%, 100% {
-      text-shadow: 0 0 10px rgba(136, 192, 208, 0.4);
-    }
-    50% {
-      text-shadow:
-        0 0 18px rgba(136, 192, 208, 0.8),
-        0 0 26px rgba(180, 142, 173, 0.5);
-    }
-  }
-
-  /* Logo pop anim */
-  @keyframes banner-pop {
-    0% {
-      opacity: 0;
-      transform: translateY(4px) scale(0.96);
-      text-shadow: 0 0 4px rgba(136, 192, 208, 0.25);
-    }
-    60% {
-      opacity: 1;
-      transform: translateY(0) scale(1.03);
-      text-shadow:
-        0 0 18px rgba(90, 195, 224, 0.9),
-        0 0 26px rgba(186, 128, 175, 0.7);
-    }
-    100% {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-      text-shadow:
-        0 0 10px rgba(136, 192, 208, 0.6),
-        0 0 18px rgba(180, 142, 173, 0.4);
-    }
-  }
-
-  /* Boot box pop */
-  @keyframes boot-box-pop {
-    0% {
-      opacity: 0;
-      transform: translateY(4px) scale(0.97);
-      box-shadow:
-        0 0 0 1px rgba(15, 23, 42, 0.7),
-        0 0 6px rgba(148, 163, 184, 0.2);
-    }
-    60% {
-      opacity: 1;
-      transform: translateY(0) scale(1.02);
-      box-shadow:
-        0 0 0 1px rgba(148, 163, 184, 0.7),
-        0 0 26px rgba(56, 189, 248, 0.45);
-    }
-    100% {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-      box-shadow:
-        0 0 0 1px rgba(148, 163, 184, 0.55),
-        0 0 18px rgba(15, 23, 42, 0.9);
-    }
-  }
-
-  @keyframes boot-box-fade {
-    to {
-      opacity: 0;
-      transform: translateY(-4px) scale(0.98);
-    }
-  }
-
-  @keyframes line-in {
-    0% {
-      opacity: 0;
-      transform: translateY(3px);
-    }
-    100% {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#131313">
+  <meta name="description" content="Cathal Lee — AI engineer and founder of Upcrossing AI. Building AdBalloon, agentic systems, and speech AI research.">
+  <meta property="og:title" content="CathOS — Cathal Lee">
+  <meta property="og:description" content="AI engineer and founder of Upcrossing AI. AdBalloon, speech research, and selected engineering projects.">
+  <title>CathOS — Cathal Lee</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="core.js" defer></script>
+  <script src="app.js" defer></script>
+  <script src="visuals.js" defer></script>
 </head>
 <body>
-<div id="terminal">
-  <div class="banner banner-ascii hidden" id="banner-ascii">
-    <div class="banner-ascii-box">
-      <span class="banner-title-gradient">
-     █████╗  █████╗ ████████╗██╗  ██╗ █████╗ ██╗        ██╗ ██████╗ 
-    ██╔════╝██╔══██╗╚══██╔══╝██║  ██║██╔══██╗██║        ██║██╔═══██╗
-    ██║     ███████║   ██║   ███████║███████║██║        ██║██║   ██║
-    ██║     ██╔══██║   ██║   ██╔══██║██╔══██║██║        ██║██║   ██║
-    ╚██████╗██║  ██║   ██║   ██║  ██║██║  ██║███████╗██╗██║╚██████╔╝
-     ╚═════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝╚═╝ ╚═════╝ 
-      </span>
-    </div>
-
-    <span class="banner-title-gradient banner-subline">Welcome to CathOS, my digital Porfolio! Type 'help' to list available commands.</span>
-
-
-    <div class="status-box hidden" id="status-box"></div>
-  </div>
-
-  <div class="banner banner-ocr hidden" id="banner-ocr">
-    CathOS<br>
-    <span class="banner-subtext">Type <code>help</code> to begin.</span>
-  </div>
-  <div class="prompt-line hidden">
-    <span class="prefix">
-      <span class="user">>>cath17</span>@<span class="host">github.io</span> : <span class="path">~</span> <span class="dollar">$</span>
-    </span>
-    <input id="commandInput" autofocus autocomplete="off" spellcheck="false" />
-  </div>
-</div>
-
-<script>
-const terminal = document.getElementById('terminal');
-const input = document.getElementById('commandInput');
-
-const bannerAsciiHTML = document.getElementById('banner-ascii').innerHTML;
-const bannerOcrHTML = document.getElementById('banner-ocr').innerHTML;
-
-const commands = {
-  help: `Available commands:
-  <i class="fa-solid fa-folder-open fa-fw"></i> projects    - Selected work & Research
-  <i class="fa-solid fa-user fa-fw"></i> about       - Overview & Background
-  <i class="fa-solid fa-lightbulb fa-fw"></i> skills      - Core Technical Skills
-  <i class="fa-solid fa-tools fa-fw"></i> technologies - Tools, Stacks, and Platforms
-  <i class="fa-solid fa-envelope fa-fw"></i> contact      - GitHub, Email and CV
-  <i class="fa-solid fa-broom fa-fw"></i> clear        - Clear the Terminal`,
-
-  about: `Hello, I’m Cathal, a third-year Mathematics student at the University of Warwick focused on ML for speech. I build inference-time methods for diffusion/flow-based TTS, including SMC-style reward alignment and activation steering. Outside of ML, I’ve played the cello since I was six and I train for HYROX.`,
-
-  skills: `Core skills:
-  <i class="fa-solid fa-brain fa-fw"></i> Machine learning & Deep learning with Understanding in Transformer Architectures 
-  <i class="fa-solid fa-wave-square fa-fw"></i> Mathematical Background with Algorithmical Approach
-  <i class="fa-solid fa-network-wired fa-fw"></i> Signal Processing & Probabilistic Modelling & PDEs
-  <i class="fa-solid fa-gears fa-fw"></i> MLOps, Experiment Tooling, and Evaluation Pipelines
-  <i class="fa-solid fa-code fa-fw"></i> AI Fine-Tuning, Diffusion Transformers
-  <i class="fa-solid fa-diagram-project fa-fw"></i> Systems thinking & end‑to‑end product focus`,
-
-  technologies: `Key technologies:
-  <i class="fa-brands fa-python fa-fw"></i> Python, NumPy, MATLAB, C#, C++, Java
-  <i class="fa-solid fa-robot fa-fw"></i> PyTorch, TensorFlow, Scikit-Learn
-  <i class="fa-solid fa-database fa-fw"></i> MongoDB, Redis, DB Modelling
-  <i class="fa-brands fa-docker fa-fw"></i> CI/CD with Docker, basic Kubernetes & AWS 
-  <i class="fa-brands fa-linux fa-fw"></i> Linux, Shell, Tmux, Git
-  <i class="fa-brands fa-react fa-fw"></i> API Integrations, LangChain4j, Retrieval-Augmented Generation`,
-
-  projects: `Selected projects:
-  
-  1. Emosteer — training-free emotion control for TTS.
-     Built activation steering + emotion2vec top‑k masking (PyTorch, DiT).
-     Github: <a href="https://github.com/cathal0317/emosteer-tts-unofficial" target="_blank" rel="noopener noreferrer">GitHub: emosteer-unofficial</a>
-  2. Fine-Tuning Emotion Controllable Text-to-Speech "VEVO" for Korean Language
-     - <a href="https://github.com/cathal0317/vevo" target="_blank" rel="noopener noreferrer">GitHub: VEVO</a>
-  3. Sohri — JSON → graph dialogue manager.
-     Built state tracking + validation with Redis + FastAPI + Nginx.
-     Github: <a href="https://github.com/cathal0317/chatbot-graph-builder" target="_blank" rel="noopener noreferrer">GitHub: Chatbot-Graph-Builder</a>
-  4. Character-Specific Chatbot via RAG
-     - <a href="https://github.com/cathal0317/study" target="_blank" rel="noopener noreferrer">GitHub: study</a>
-  5. Daily Algoithm Practice
-     - <a href="https://github.com/cathal0317/Algorithm_Practice" target="_blank" rel="noopener noreferrer">GitHub: Algorithm_Study</a>
-  6. Phyiscal Modelling and Simulation via C# and Python
-     - <a href="https://github.com/cathal0317/Physics_Modelling" target="_blank" rel="noopener noreferrer">GitHub: Physics_Modelling</a>
-  7. Research paper on Group Theory and Music Theory
-     - <a href="Cathal_Essay.pdf" target="_blank" rel="noopener noreferrer">Group Theory Behind Triadic Chordal Transformation of Music Theory</a>
-  8. SMC reward alignment for DiT‑TTS.
-     Implemented ODE→SDE, resampling, ESS threshold, beta‑anneal.
-     Github: <a href="https://github.com/cathal0317/Reward_Alignment-Test" target="_blank" rel="noopener noreferrer">GitHub: Reward-Alignemnt-Test</a>`,
-
-  contact: `You can reach me at:
-  <i class="fa-solid fa-envelope fa-fw"></i> <a href="mailto:hlzh0610@gmail.com">hlzh0610@gmail.com</a>
-  <i class="fa-brands fa-github fa-fw"></i> <a href="https://github.com/cathal0317" target="_blank">github.com/cathal0317</a>
-  <i class="fa-brands fa-instagram fa-fw"></i> <a href="https://www.instagram.com/trend__odyssey" target="_blank">Trend_Odyssey</a>`,
-
-  clear: 'CLEAR'
-};
-
-let history = [];
-let historyIndex = -1;
-let isTyping = false;
-
-// Track current typing animation so we can skip/finish it
-let typingState = null;
-
-const ID_LENGTH = 6;
-const HEX = "0123456789ABCDEF";
-
-function generateUserId() {
-  const letters = "abcdefghijklmnopqrstuvwxyz";
-  const numbers = "0123456789";
-  let id = "";
-  for (let i = 0; i < ID_LENGTH; i++) {
-    const useNumber = Math.random() < 0.3;
-    id += useNumber
-      ? numbers.charAt(Math.floor(Math.random() * numbers.length))
-      : letters.charAt(Math.floor(Math.random() * letters.length));
-  }
-  return `user-${id}`;
-}
-
-function generateSessionKey() {
-  const part = () => {
-    let s = "";
-    for (let i = 0; i < 4; i++) {
-      s += HEX.charAt(Math.floor(Math.random() * HEX.length));
-    }
-    return s;
-  };
-  return `0x${part()}-${part()}-${new Date().getFullYear()}`;
-}
-
-const displayUserId = generateUserId();
-const sessionKey = generateSessionKey();
-
-// Render status block
-function renderStatusBox(userId, sessionKey) {
-  const statusBox = document.getElementById('status-box');
-  if (!statusBox) return;
-
-
-
-  statusBox.innerHTML =
-`+-----------------------------------------------------------+
-| <span class="log-accent-purple">TERMINAL</span> v3.1.4f [<span class="log-accent-pink">SYNTAX CORE: ONLINE</span>]                    |
-| USER ID: <span class="log-accent-red">${userId}</span>                                      |
-| ACCESS LEVEL: <span class="log-accent-pink">guest</span>                                       |
-| PROTOCOL: <span class="log-accent-purple">Serenity SHELL-v.2.4.2</span> over <span class="log-accent-red">CathOS</span>              |
-+-----------------------------------------------------------+
-| <span class="log-accent-purple">CathOS Terminal Interface v.3</span>                             |
-| ©<span class="log-accent-pink">2025</span> cathoon                                             |
-+-----------------------------------------------------------+
-| CORE DIAGNOSTIC: <span class="log-accent-pink">PASSED</span>                                   |
-| MEMORY TRACE: <span class="log-accent-purple">COHERENT</span>                                    |
-| Session key: <span class="log-accent-purple">${sessionKey}</span>                             |
-| Welcome back, <span class="log-accent-red">${userId}</span>.                                |
-+-----------------------------------------------------------+`;
-}
-
-function printOutput(cmd, output) {
-  const newLine = document.createElement('div');
-  newLine.innerHTML = `<span class="prompt">&gt;</span> ${cmd}`;
-  terminal.insertBefore(newLine, input.parentElement);
-
-  if (output === 'CLEAR') {
-    terminal.innerHTML = '';
-
-    const bannerAscii = document.createElement('div');
-    bannerAscii.className = 'banner banner-ascii';
-    bannerAscii.innerHTML = bannerAsciiHTML;
-
-    const bannerOcr = document.createElement('div');
-    bannerOcr.className = 'banner banner-ocr';
-    bannerOcr.innerHTML = bannerOcrHTML;
-
-    terminal.appendChild(bannerAscii);
-    terminal.appendChild(bannerOcr);
-    terminal.appendChild(input.parentElement);
-    return;
-  }
-
-  const outLine = document.createElement('div');
-  outLine.classList.add('typed-line');
-  terminal.insertBefore(outLine, input.parentElement);
-
-  if (output) typeLineWithAccents(outLine, output);
-  else typeLineWithAccents(outLine, `Command not found: ${cmd}`);
-
-  terminal.scrollTop = terminal.scrollHeight;
-}
-
-function typeLine(element, text, speed = 5) {
-  isTyping = true;
-
-  // If text contains HTML, render immediately
-  if (/<\/?[a-z][\s\S]*>/i.test(text)) {
-    element.innerHTML = text;
-    isTyping = false;
-    typingState = null;
-    terminal.scrollTop = terminal.scrollHeight;
-    return;
-  }
-
-  typingState = {
-    mode: 'plain',
-    element,
-    text,
-    index: 0,
-    timeoutId: null
-  };
-
-  (function type() {
-    if (!typingState || typingState.mode !== 'plain') return;
-
-    if (typingState.index < typingState.text.length) {
-      element.textContent += typingState.text.charAt(typingState.index++);
-      terminal.scrollTop = terminal.scrollHeight;
-      typingState.timeoutId = setTimeout(type, speed);
-    } else {
-      isTyping = false;
-      typingState = null;
-    }
-  })();
-}
-
-// Typed output accents
-function typeLineWithAccents(element, text, speed = 12, accentChance = 0.2) {
-  isTyping = true;
-
-  // Fallback for HTML
-  if (/<\/?[a-z][\s\S]*>/i.test(text)) {
-    element.innerHTML = text;
-    isTyping = false;
-    typingState = null;
-    terminal.scrollTop = terminal.scrollHeight;
-    return;
-  }
-
-  const tokens = text.split(/(\s+)/); // keep spaces
-  const accentClasses = ['log-accent-pink', 'log-accent-purple', 'log-accent-red'];
-
-  const fragments = tokens.map(token => {
-    if (!token.trim()) {
-      return { text: token, className: null };
-    }
-    // Accent chance
-    const shouldAccent = Math.random() < accentChance;
-    const className = shouldAccent
-      ? accentClasses[Math.floor(Math.random() * accentClasses.length)]
-      : null;
-    return { text: token, className };
-  });
-
-  element.innerHTML = '';
-  const nodes = [];
-
-  fragments.forEach(frag => {
-    const span = document.createElement('span');
-    if (frag.className) span.className = frag.className;
-    element.appendChild(span);
-    nodes.push({ node: span, text: frag.text });
-  });
-
-  typingState = {
-    mode: 'accent',
-    nodes,
-    fragIndex: 0,
-    charIndex: 0,
-    timeoutId: null
-  };
-
-  (function typeNext() {
-    if (!typingState || typingState.mode !== 'accent') return;
-
-    if (typingState.fragIndex >= typingState.nodes.length) {
-      isTyping = false;
-      typingState = null;
-      return;
-    }
-
-    const current = typingState.nodes[typingState.fragIndex];
-
-    if (typingState.charIndex < current.text.length) {
-      current.node.textContent += current.text.charAt(typingState.charIndex++);
-      terminal.scrollTop = terminal.scrollHeight;
-      typingState.timeoutId = setTimeout(typeNext, speed);
-    } else {
-      typingState.fragIndex++;
-      typingState.charIndex = 0;
-      typingState.timeoutId = setTimeout(typeNext, speed);
-    }
-  })();
-}
-
-function finishTypingNow() {
-  if (!typingState) return;
-
-  if (typingState.mode === 'plain') {
-    const { element, text, index } = typingState;
-    if (index < text.length) {
-      element.textContent += text.slice(index);
-    }
-  } else if (typingState.mode === 'accent') {
-    const { nodes, fragIndex, charIndex } = typingState;
-    for (let fi = fragIndex; fi < nodes.length; fi++) {
-      const node = nodes[fi];
-      const start = fi === fragIndex ? charIndex : 0;
-      if (start < node.text.length) {
-        node.node.textContent += node.text.slice(start);
-      }
-    }
-  }
-
-  if (typingState.timeoutId) {
-    clearTimeout(typingState.timeoutId);
-  }
-
-  isTyping = false;
-  typingState = null;
-  terminal.scrollTop = terminal.scrollHeight;
-}
-
-
-const bootLines = [
-  'CATHOS v3.1.4',
-  '[CORE SYSTEM: ONLINE]',
-  `USER ID: ${displayUserId}`,
-  'ACCESS LEVEL: guest',
-  'PROTOCOL: MonoTERM-shell v2.0',
-  '',
-  '> Loading cognitive modules ... [OK]',
-  '> Verifying shell integrity ... [OK]',
-  '> Establishing node connection ... [STABLE]',
-
-  '> Initialising proof kernel ... [WARNING]',
-  '> Kernel version outdated.',
-  '> Verifying user credentials ... [OK]',
-  '> Initialising user environment ... [OK]',
-  '',
-  `Session key: ${sessionKey}`,
-  'Welcome.'
-];
-
-function runBootSequence() {
-  const bannerAscii = document.getElementById('banner-ascii');
-  const bannerOcr = document.getElementById('banner-ocr');
-  const statusBox = document.getElementById('status-box');
-
-  // Create boot box
-  const bootBox = document.createElement('div');
-  bootBox.className = 'boot-box';
-  terminal.insertBefore(bootBox, input.parentElement);
-
-  let index = 0;
-
-  function next() {
-    if (index >= bootLines.length) {
-      // Pop boot box
-      bootBox.classList.add('boot-box-animated');
-      // Fade then show UI
-      setTimeout(() => {
-        bootBox.classList.add('boot-box-hide');
-        setTimeout(() => {
-          if (bootBox.parentNode) bootBox.parentNode.removeChild(bootBox);
-          // Show logo, status, prompt
-          bannerAscii.classList.remove('hidden');
-          bannerOcr.classList.remove('hidden');
-          bannerAscii.classList.add('banner-animated');
-          if (statusBox) {
-            renderStatusBox(displayUserId, sessionKey);
-            statusBox.classList.remove('hidden');
-          }
-          input.parentElement.classList.remove('hidden');
-          input.focus();
-          terminal.scrollTop = terminal.scrollHeight;
-        }, 550);
-      }, 380);
-      return;
-    }
-
-    const outLine = document.createElement('div');
-    outLine.classList.add('typed-line');
-    bootBox.appendChild(outLine);
-    // Slightly slower boot
-    typeLineWithAccents(outLine, bootLines[index++], 6, 0.45);
-
-    setTimeout(next, 190);
-  }
-
-  next();
-}
-
-runBootSequence();
-
-input.addEventListener('keydown', e => {
-  if (isTyping) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      finishTypingNow();
-    }
-    return;
-  }
-
-  if (e.key === 'Enter') {
-    const rawCmd = input.value.trim();
-    const parts = rawCmd.split(/\s+/);
-    const cmd = parts[0]?.toLowerCase();
-    const arg = parts.slice(1).join(' ');
-    if (rawCmd) {
-      history.push(rawCmd);
-      historyIndex = history.length;
-      let output;
-      if (cmd === 'open' || cmd === 'project') {
-        output = handleOpenCommand(arg);
-      } else {
-        output = commands[cmd];
-      }
-      printOutput(rawCmd, output);
-    }
-    input.value = '';
-  }
-
-  if (e.key === 'ArrowUp') {
-    if (historyIndex > 0) input.value = history[--historyIndex];
-    e.preventDefault();
-  }
-
-  if (e.key === 'ArrowDown') {
-    if (historyIndex < history.length - 1) input.value = history[++historyIndex];
-    else input.value = '';
-    e.preventDefault();
-  }
-
-  if (e.key === 'Tab') {
-    e.preventDefault();
-    const current = input.value.trim().toLowerCase();
-    if (!current) return;
-    const matches = Object.keys(commands).filter(c => c.startsWith(current));
-    if (matches.length === 1) input.value = matches[0];
-    else if (matches.length > 1)
-      printOutput(current, `Possible commands:\n  ${matches.join('\n  ')}`);
-  }
-});
-</script>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <noscript><p style="padding:16px;text-align:center">Interactive experiments need JavaScript. You can still read the page, <a href="https://github.com/cathal0317">browse the source projects</a>, or <a href="Cathal_Essay.pdf">read the research paper</a>.</p></noscript>
+  <div class="reading-progress" aria-hidden="true"></div>
+  <header class="site-header">
+    <a class="brand" href="#home" aria-label="CathOS home"><span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Cath<span class="brand-os">OS</span><sup>04</sup></a>
+    <nav aria-label="Main navigation"><a href="#work"><span>01</span> Work</a><a href="#about"><span>02</span> Focus</a><a href="#play"><span>03</span> Demo</a></nav>
+    <div class="header-actions"><button class="terminal-trigger" data-terminal aria-label="Open terminal, Control or Command K"><span aria-hidden="true">&gt;_</span><span class="shortcut">⌘ K</span></button><a class="header-contact" href="#contact">Contact <span aria-hidden="true">↗</span></a></div>
+  </header>
+  <main id="main">
+    <section class="hero page-width" id="home" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <div class="eyebrow hero-intro"><span class="status-dot"></span> AI ENGINEER &amp; FOUNDER <span class="eyebrow-divider">/</span> LONDON</div>
+        <h1 id="hero-title" class="name-heading">Cathal Lee<span class="name-period">.</span><span class="hero-role">Building AdBalloon.</span></h1>
+        <p class="hero-description">I’m the founder of <a href="https://www.upcrossing.ai/" target="_blank" rel="noopener noreferrer">Upcrossing AI</a>. We’re building AdBalloon to help small businesses make video ads from the photos and information they already have.</p>
+        <p class="hero-previous">AI research · agentic systems · generative speech</p>
+        <div class="hero-buttons"><a class="button button-primary" href="#work">View my work <span aria-hidden="true">↘</span></a><a class="text-button" href="https://www.upcrossing.ai/" target="_blank" rel="noopener noreferrer">Upcrossing AI <span aria-hidden="true">↗</span></a></div>
+        <div class="hero-note"><button class="text-button" data-terminal><span class="terminal-glyph" aria-hidden="true">&gt;_</span> Open terminal <span class="mono">⌘ K</span></button></div>
+      </div>
+      <div class="hero-art" id="hero-art">
+        <div class="art-meta"><span><span class="live-indicator"></span> INTERACTIVE STUDY / 001</span><span id="art-mode-label">TORUS / ℝ³</span></div>
+        <canvas id="thought-canvas" tabindex="0" role="img" aria-label="Interactive mathematical sculpture. Drag to rotate, or use the arrow keys. Switch between form, signal, and network using the buttons below."></canvas>
+        <div class="art-coordinate" aria-hidden="true"><span>x <b id="coord-x">0.00</b></span><span>y <b id="coord-y">0.00</b></span><span>z <b>∞</b></span></div>
+        <div class="art-cross art-cross-tl" aria-hidden="true">+</div><div class="art-cross art-cross-br" aria-hidden="true">+</div>
+        <div class="art-caption"><span class="drag-label"><span aria-hidden="true">↔</span> DRAG TO EXPLORE</span><button id="motion-toggle" class="motion-toggle" aria-pressed="false" aria-label="Pause animations"><span aria-hidden="true">Ⅱ</span></button></div>
+        <div class="art-controls" role="group" aria-label="Visualization"><button class="active" data-art="form" aria-pressed="true">01 <span>Form</span></button><button data-art="signal" aria-pressed="false">02 <span>Signal</span></button><button data-art="network" aria-pressed="false">03 <span>Network</span></button></div>
+      </div>
+    </section>
+    <div class="context-bar page-width"><span class="mono">FOUNDER, UPCROSSING AI</span><span>AdBalloon <i>/</i> AI research <i>/</i> Agentic systems</span><a href="https://github.com/cathal0317" target="_blank" rel="noopener noreferrer" class="mono">GITHUB <span aria-hidden="true">↗</span></a></div>
+
+    <section class="work-section page-width section-space" id="work" aria-labelledby="work-title">
+      <div class="section-heading"><div><div class="eyebrow section-index">01 / PROJECTS</div><h2 id="work-title">Selected work</h2></div><p>Current projects and earlier work<br>in speech and AI engineering.</p></div>
+      <div class="work-toolbar"><div class="filter-group" role="group" aria-label="Filter projects"><button class="active" data-filter="all" aria-pressed="true">All work <sup>08</sup></button><button data-filter="speech" aria-pressed="false">Speech AI</button><button data-filter="systems" aria-pressed="false">Systems</button><button data-filter="maths" aria-pressed="false">Research</button></div><span class="mono result-count" id="result-count" role="status">08 PROJECTS</span></div>
+      <div class="featured-grid" id="featured-grid">
+        <article class="project-card" data-category="systems">
+          <button class="project-open" data-project="adballoon" aria-label="Read about AdBalloon"><div class="project-art adballoon-art"><div class="visual-topline mono"><span>01 / UPCROSSING AI</span><span>↗</span></div><div class="adballoon-diagram" aria-hidden="true"><div class="asset-stack"><div class="asset-sheet"><svg viewBox="0 0 40 40"><rect x="7" y="8" width="26" height="24" rx="2"/><circle cx="15" cy="16" r="3"/><path d="M9 29l8-8 5 5 5-7 5 10"/></svg></div><div class="asset-sheet asset-sheet-front"><span></span><span></span><span></span><small>BUSINESS DATA</small></div></div><div class="pipeline-line"><i></i></div><div class="video-frame"><div class="video-scene"><span>AdBalloon</span><svg viewBox="0 0 24 24"><path d="M9 6l10 6-10 6z"/></svg><i></i><i></i></div><div class="video-progress"><i></i></div></div></div><div class="visual-bottomline"><span>assets → script → video</span><span class="mini-tag">IN DEVELOPMENT</span></div></div>
+            <div class="project-info"><div class="project-title-row"><h3>AdBalloon</h3><span class="circle-arrow" aria-hidden="true">↗</span></div><p>Video ads from a business’s existing photos and information.</p><div class="project-tags"><span>FastAPI</span><span>Google Pub/Sub</span><span>FFmpeg</span></div></div>
+          </button>
+        </article>
+        <article class="project-card" data-category="systems">
+          <button class="project-open" data-project="agentic" aria-label="Read about Dialogue generation"><div class="project-art agentic-art"><div class="visual-topline mono"><span>02 / CONVERSATION GENERATION</span><span>↗</span></div><svg class="graph-visual agentic-graph" viewBox="0 0 340 180" aria-hidden="true"><path class="graph-line" d="M88 72H250 M250 72V130H170 M170 130H88V72"/><path class="graph-line graph-line-active" d="M88 72H250V130H170"/><rect x="35" y="49" width="92" height="46" rx="5"/><text x="81" y="76">user</text><rect class="node-active" x="213" y="49" width="92" height="46" rx="5"/><text x="259" y="76">assistant</text><rect x="124" y="108" width="92" height="42" rx="5"/><text x="170" y="133">reviewer</text><text x="81" y="32" class="private-context-label">private context</text><text x="170" y="172" class="private-context-label">continue / end / stalled</text></svg><div class="visual-bottomline"><span>scenario → dialogue → review</span><span class="mini-tag">IN DEVELOPMENT</span></div></div>
+            <div class="project-info"><div class="project-title-row"><h3>Dialogue generation</h3><span class="circle-arrow" aria-hidden="true">↗</span></div><p>Simulated conversations for an emotional speech dataset.</p><div class="project-tags"><span>Python</span><span>OpenAI</span><span>Pydantic</span></div></div>
+          </button>
+        </article>
+        <article class="project-card" data-category="speech">
+          <button class="project-open" data-project="emosteer" aria-label="Read about EmoSteer / F5-TTS"><div class="project-art emosteer-art"><div class="visual-topline mono"><span>03 / SPEECH SYNTHESIS</span><span>↗</span></div><div class="wave-visual" aria-hidden="true"></div><div class="visual-bottomline"><span>activation steering / F5-TTS</span><span class="mini-tag">RESEARCH</span></div></div>
+            <div class="project-info"><div class="project-title-row"><h3>EmoSteer / F5-TTS</h3><span class="circle-arrow" aria-hidden="true">↗</span></div><p>Emotion control during inference, without retraining the model.</p><div class="project-tags"><span>PyTorch</span><span>F5-TTS</span><span>Activation steering</span></div></div>
+          </button>
+        </article>
+      </div>
+      <div class="work-index">
+        <div class="index-heading mono"><span>MORE WORK</span><span>PROJECT / FOCUS</span></div>
+        <button class="project-row" data-category="systems" data-project="sohri"><span class="project-number">04</span><span class="row-name">Sohri dialogue runtime</span><span class="row-description">Graph validation and dialogue state</span><span class="row-kind">Systems</span><span class="row-arrow" aria-hidden="true">↗</span></button>
+        <button class="project-row" data-category="speech" data-project="reward"><span class="project-number">05</span><span class="row-name">Reward alignment for TTS</span><span class="row-description">Stochastic sampling and SMC resampling</span><span class="row-kind">Speech AI</span><span class="row-arrow" aria-hidden="true">↗</span></button>
+        <button class="project-row" data-category="systems" data-project="multimodal"><span class="project-number">06</span><span class="row-name">Speech-to-LLM alignment</span><span class="row-description">Whisper → projection → TinyLlama</span><span class="row-kind">Multimodal</span><span class="row-arrow" aria-hidden="true">↗</span></button>
+        <button class="project-row" data-category="speech" data-project="vevo"><span class="project-number">07</span><span class="row-name">Korean emotional TTS</span><span class="row-description">VEVO adaptation and speech control</span><span class="row-kind">Speech AI</span><span class="row-arrow" aria-hidden="true">↗</span></button>
+        <button class="project-row" data-category="maths" data-project="music"><span class="project-number">08</span><span class="row-name">Group theory &amp; music</span><span class="row-description">Triadic chord transformations</span><span class="row-kind">Research</span><span class="row-arrow" aria-hidden="true">↗</span></button>
+      </div>
+    </section>
+
+    <section class="about-section page-width section-space" id="about" aria-labelledby="about-title">
+      <div class="about-heading"><div class="eyebrow section-index">02 / FOCUS</div><h2 id="about-title">What I build</h2><p class="about-intro">I work between model research and product engineering: shaping how AI behaves, designing agentic loops, and turning the useful parts into working software.</p><p class="outside-work">Outside work: cello, CrossFit, and cooking.</p><div class="toolkit"><span class="eyebrow">TOOLS</span><div><span>Python</span><span>PyTorch</span><span>FastAPI</span><span>PostgreSQL</span><span>Redis</span><span>Docker</span><span>TypeScript</span><span>Next.js</span></div></div></div>
+      <div class="focus-list">
+        <article class="focus-item"><span class="focus-number mono">01</span><div><h3>AI research</h3><p>I work close to the model, testing ways to steer speech at inference time, guide generation with rewards, and connect audio models to language models.</p></div></article>
+        <article class="focus-item"><span class="focus-number mono">02</span><div><h3>Agentic building</h3><p>I build agents as explicit systems: separate roles, private context, review loops, and clear stopping rules that make behaviour easier to inspect and improve.</p></div></article>
+        <article class="focus-item"><span class="focus-number mono">03</span><div><h3>Product engineering</h3><p>For AdBalloon, I turn those ideas into a working product with APIs, queues, workers, persistent state, asset pipelines, and video rendering.</p></div></article>
+      </div>
+    </section>
+
+    <section class="play-section" id="play" aria-labelledby="play-title">
+      <div class="play-inner page-width"><div class="play-copy"><div class="eyebrow section-index">03 / RESEARCH DEMO</div><h2 id="play-title">Chord<br>transformations</h2><p>An interactive example from my<br>dissertation on group theory and music.</p><p class="play-explanation">P, L, and R each change one note of a major or minor triad. Choose a transformation, then press Hear chord to listen.</p><a class="inline-link" href="Cathal_Essay.pdf" target="_blank" rel="noopener noreferrer">Read the dissertation <span aria-hidden="true">↗</span></a><div class="lab-footnote mono">AN INTERACTIVE ILLUSTRATION / SOUND IS OPTIONAL</div></div>
+      <div class="chord-lab"><div class="lab-topline"><span class="mono">P / L / R TRANSFORMATIONS</span><button id="chord-reset" class="reset-button" aria-label="Reset to C major">↺ Reset</button></div><div class="chord-display"><svg id="chord-map" viewBox="0 0 320 300" role="img" aria-label="A chromatic pitch circle showing the notes C, E, and G"><circle cx="160" cy="144" r="104" class="pitch-orbit"/><circle cx="160" cy="144" r="76" class="pitch-inner"/><g id="pitch-lines"></g><polygon id="chord-polygon" points="160,40 250.07,196 108,234.07"/><g id="pitch-notes"></g><circle cx="160" cy="144" r="2.5" class="pitch-origin"/></svg><div class="chord-readout"><span class="mono">CURRENT CHORD</span><strong id="chord-name">C major</strong><span id="chord-notes">C · E · G</span><button class="hear-button" id="hear-chord"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 8H7L11 4V16L7 12H4Z M14 7Q17 10 14 13"/></svg>Hear chord</button></div></div><div class="transform-controls" role="group" aria-label="Transform the chord"><button data-transform="P"><strong>P</strong><span>Parallel</span><span aria-hidden="true">↗</span></button><button data-transform="L"><strong>L</strong><span>Leading-tone</span><span aria-hidden="true">↗</span></button><button data-transform="R"><strong>R</strong><span>Relative</span><span aria-hidden="true">↗</span></button></div><p class="transform-description" id="transform-description" role="status">Start with C major. Choose a transformation.</p><div class="lab-history mono" id="chord-history" aria-label="Transformation history">C major</div></div></div>
+    </section>
+
+    <section class="contact-section page-width section-space" id="contact" aria-labelledby="contact-title"><div class="contact-top"><span class="eyebrow">04 / CONTACT</span><span class="mono contact-invite"><span class="status-dot"></span> LONDON, UK</span></div><h2 id="contact-title">Get in<br>touch.<a href="mailto:cathallee25@gmail.com" class="contact-arrow" aria-label="Email Cathal"><span aria-hidden="true">↗</span></a></h2><div class="contact-bottom"><div class="email-group"><a href="mailto:cathallee25@gmail.com">cathallee25@gmail.com</a><button id="copy-email" aria-label="Copy email address" title="Copy email address"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1"/><path d="M12 4V3H3V12H4"/></svg></button><span id="copy-status" role="status"></span></div><div class="social-links"><a href="https://github.com/cathal0317" target="_blank" rel="noopener noreferrer">GitHub ↗</a><a href="https://www.upcrossing.ai/" target="_blank" rel="noopener noreferrer">Upcrossing AI ↗</a></div></div></section>
+  </main>
+  <footer class="site-footer page-width"><a class="footer-brand" href="#home">CathOS<span>© <span id="year">2026</span> Cathal Lee</span></a><span class="mono footer-note">UPDATED OCTOBER 2026</span><span class="mono local-time">UK <time id="local-clock"></time><span class="status-dot"></span></span></footer>
+
+  <dialog id="project-dialog" class="project-dialog" aria-labelledby="detail-title"><div class="dialog-topline"><span class="mono" id="detail-category"></span><button class="close-button" data-close-project aria-label="Close project details">×</button></div><div class="project-dialog-body"><span class="detail-number mono" id="detail-number"></span><h2 id="detail-title"></h2><p class="detail-lead" id="detail-lead"></p><div class="detail-tags" id="detail-tags"></div><div class="detail-content"><span class="eyebrow">THE WORK</span><p id="detail-body"></p></div><div class="detail-links"><a class="button button-primary" id="detail-link" target="_blank" rel="noopener noreferrer">View on GitHub <span aria-hidden="true">↗</span></a><a id="detail-extra" href="#play" class="text-button" hidden>Try the demo ↓</a></div></div></dialog>
+  <dialog id="terminal-dialog" class="terminal-dialog" aria-labelledby="terminal-title"><div class="terminal-titlebar"><div><span class="terminal-dot"></span><span id="terminal-title">CathOS / guest session</span></div><button class="close-button" data-close-terminal aria-label="Close terminal">×</button></div><div class="terminal-output" id="terminal-output" role="log" aria-live="polite" aria-relevant="additions"><div class="terminal-welcome"><strong>CathOS<span> v4.0</span></strong><p>Projects, focus areas, and contact details.<br>Type <b>help</b> for commands. Everything runs in your browser.</p></div></div><form id="terminal-form"><label for="command-input"><span>guest</span>@cathos <b>~ $</b></label><input id="command-input" name="command" placeholder="Try projects, about, or help…" autocomplete="off" spellcheck="false" aria-label="Terminal command"><button type="submit" aria-label="Run command">↵</button></form><div class="terminal-footer mono"><span>↑↓ HISTORY <span class="terminal-footer-tab">/ TAB AUTOCOMPLETE</span></span><span>ESC TO CLOSE</span></div></dialog>
+  <div class="toast" id="toast" role="status"></div>
 </body>
 </html>
